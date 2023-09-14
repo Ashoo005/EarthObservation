@@ -1,1 +1,2 @@
-# EarthObservation
+# eodp
+EODP main repository
