@@ -63,6 +63,7 @@ class l1b(initL1b):
         :return: TOA in DN, equalized
         """
         #TODO
+        toa=(toa-eq_add)/eq_mult
         return toa
 
     def restoration(self,toa,gain):
@@ -73,10 +74,12 @@ class l1b(initL1b):
         :return: TOA in radiances [mW/sr/m2]
         """
         #TODO
+        toa=toa*gain
         self.logger.debug('Sanity check. TOA in radiances after gain application ' + str(toa[1,-1]) + ' [mW/m2/sr]')
 
         return toa
 
     def plotL1bToa(self, toa_l1b, outputdir, band):
         #TODO
+
         a=1 # dummy
