@@ -11,6 +11,7 @@ from common.plot.plotMat2D import plotMat2D
 from common.plot.plotF import plotF
 from scipy.signal import convolve2d
 from common.src.auxFunc import getIndexBand
+import math
 
 class opticalPhase(initIsm):
 
@@ -30,6 +31,7 @@ class opticalPhase(initIsm):
         # Calculation and application of the ISRF
         # -------------------------------------------------------------------------------
         self.logger.info("EODP-ALG-ISM-1010: Spectral modelling. ISRF")
+        isrf, isrf_mv = readIsrf(self.auxdir + self.ismConfig.isrffile, band);
         toa = self.spectralIntegration(sgm_toa, sgm_wv, band)
 
         self.logger.debug("TOA [0,0] " +str(toa[0,0]) + " [e-]")
@@ -93,7 +95,9 @@ class opticalPhase(initIsm):
         :return: TOA image in irradiances [mW/m2]
         """
         # TODO
-        return toa
+
+        toa_out = toa * Tr * ((math.pi)/4) * pow((D/f),2)
+        return toa_out
 
 
     def applySysMtf(self, toa, Hsys):
@@ -104,6 +108,9 @@ class opticalPhase(initIsm):
         :return: TOA image in irradiances [mW/m2]
         """
         # TODO
+
+
+
         return toa_ft
 
     def spectralIntegration(self, sgm_toa, sgm_wv, band):
@@ -114,7 +121,26 @@ class opticalPhase(initIsm):
         :param band: band
         :return: TOA image 2D in radiances [mW/m2]
         """
+
+        isrf, isrf_mv = readIsrf(self.auxdir + self.ismConfig.isrffile, band)
+
+
         # TODO
+        isrf_n = isrf/(np.sum(isrf))
+
+        sum_isrf_n = np.sum(isrf_n)
+
+        toa = np.zeros((sgm_toa.shape[0], sgm_toa.shape[1]))
+
+        for ialt in range(sgm_toa.shape[0]):
+            for iact in range(sgm_toa.shape[1]):
+                cs = interp1d(sgm_wv, sgm_toa[ialt, iact, :], fill_value=(0, 0), bounds_error=False)
+                toa_interp = cs(isrf_mv*1000) #convert to nanometers
+                filter = toa_interp*isrf_n
+                sum_filter = np.sum(filter)
+
+                toa[ialt,iact] = sum_filter
+
         return toa
 
 
