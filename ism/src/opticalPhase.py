@@ -96,8 +96,8 @@ class opticalPhase(initIsm):
         """
         # TODO
 
-        toa_out = toa * Tr * ((math.pi)/4) * pow((D/f),2)
-        return toa_out
+        toa = toa * Tr * (math.pi/4) * pow((D/f), 2)
+        return toa
 
 
     def applySysMtf(self, toa, Hsys):
@@ -109,9 +109,14 @@ class opticalPhase(initIsm):
         """
         # TODO
 
+        GE = fft2(toa)
+        # toa_ftinv = GE * fftshift(Hsys)
+        toa = ifft2(GE * fftshift(Hsys)).real
 
+        # toa_ft = ifft2(toa_ftinv)
+        # toa_ft = np.real(toa_ft)
 
-        return toa_ft
+        return toa
 
     def spectralIntegration(self, sgm_toa, sgm_wv, band):
         """
@@ -135,7 +140,7 @@ class opticalPhase(initIsm):
         for ialt in range(sgm_toa.shape[0]):
             for iact in range(sgm_toa.shape[1]):
                 cs = interp1d(sgm_wv, sgm_toa[ialt, iact, :], fill_value=(0, 0), bounds_error=False)
-                toa_interp = cs(isrf_mv*1000) #convert to nanometers
+                toa_interp = cs(isrf_mv*1000) # convert to nanometers
                 filter = toa_interp*isrf_n
                 sum_filter = np.sum(filter)
 
