@@ -72,7 +72,7 @@ class mtf:
 
         # Calculate the System MTF
         self.logger.debug("Calculation of the Sysmtem MTF by multiplying the different contributors")
-        Hsys = 1 # dummy
+        Hsys = Hdiff * Hwfe * Hdet * Hsmear * Hmotion
 
         # Plot cuts ACT/ALT of the MTF
         self.plotMtf(Hdiff, Hdefoc, Hwfe, Hdet, Hsmear, Hmotion, Hsys, nlines, ncolumns, fnAct, fnAlt, directory, band)
@@ -98,7 +98,7 @@ class mtf:
 
         fstepAlt = 1 / nlines / w
         fstepAct = 1 / ncolumns / w
-        eps = 1e-8
+        eps = 1e-6
         fAlt = np.arange(-1 / (2 * w), 1 / (2 * w) - eps, fstepAlt)
         fAct = np.arange(-1 / (2 * w), 1 / (2 * w) - eps, fstepAct)
 
@@ -121,8 +121,11 @@ class mtf:
         :return: diffraction MTF
         """
         #TODO
-
-        Hdiff = (2/math.pi) * ((np. arccos(fr2D)) - (fr2D) * (pow((1-(pow(fr2D, 2))),0.5)))
+        def acosf(x):
+            return math.acos(x)
+        acosv = np.vectorize(acosf)
+        Hdiff = 2/pi * (acosv(fr2D) - fr2D * np.sqrt(1-fr2D * fr2D))
+        # Hdiff = (2/math.pi) * ((np. arccos(fr2D)) - (fr2D) * (pow((1-(pow(fr2D, 2))),0.5)))
         return Hdiff
 
 
@@ -139,9 +142,9 @@ class mtf:
 
         #BESSEL
 
-        x = (math.pi) * defocus * fr2D * (1 - fr2D)
+        x = pi * defocus * fr2D * (1 - fr2D)
 
-        Hdefoc = scipy.special.j1(x)
+        Hdefoc = 2 * j1(x)/x
 
         return Hdefoc
 
@@ -158,7 +161,8 @@ class mtf:
         """
         #TODO
 
-        Hwfe = math.exp((-fr2D) * (1-fr2D) * ((kLF * ((wLF * wLF)/(lambd * lambd))) + (kHF * ((wHF * wHF)/(lambd * lambd)))))
+        # Hwfe = math.exp(-fr2D * (1-fr2D) * ((kLF * ((wLF * wLF)/(lambd * lambd))) + (kHF * ((wHF * wHF)/(lambd * lambd)))))
+        Hwfe = np.exp(-fr2D * (1-fr2D) * (kLF * ((wLF * wLF)/(lambd * lambd)) + kHF * ((wHF * wHF)/(lambd * lambd))))
 
         return Hwfe
 
@@ -186,10 +190,25 @@ class mtf:
         #TODO
 
         Hsmear = np.sinc(ksmear * fnAlt)
+        Hsmear = Hsmear.repeat(ncolumns, -1)
+        Hsmear = Hsmear.reshape(-1, ncolumns)
+        # Hsmear2
+        #
+        # # Hsmear_col = Hsmear * ncolumns
+        #
+        # for i in range(ncolumns):
+        #     Hsmear[:, ncolumns] = Hsmear
+        #
 
-        Hsmear_col = Hsmear * ncolumns
+        # Hsmear = np.zeros((fnAlt.shape[0], ncolumns))
+        # Hsmear2 = np.abs(np.sin(ksmear * fnAlt * np.pi) / (ksmear * fnAlt * np.pi))
+        #
+        # for i in range(ncolumns):
+        #     Hsmear[:,i] = Hsmear2
 
-        return Hsmear_col
+        return Hsmear
+
+
 
     def mtfMotion(self, fn2D, kmotion):
         """
