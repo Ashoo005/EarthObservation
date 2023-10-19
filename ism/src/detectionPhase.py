@@ -108,10 +108,10 @@ class detectionPhase(initIsm):
         h = self.constants.h_planck
         c = self.constants.speed_light
 
-        E_ph = h * c/wv*1000
+        E_ph = h * c/wv
         E_in = toa * area_pix * tint
 
-        toa = E_in/E_ph
+        toa = E_in/E_ph/1000
 
         return toa
 
@@ -125,6 +125,11 @@ class detectionPhase(initIsm):
         #TODO
 
         toa = toa * QE
+
+        for i in range(toa.shape[0]):
+            for j in range(toa.shape[1]):
+                if toa[i, j] > self.ismConfig.FWC:
+                    toa[i, j] = self.ismConfig.FWC
 
         return toa
 
@@ -157,11 +162,11 @@ class detectionPhase(initIsm):
         """
         #TODO
 
-        prnu_act = np.random.normal(0.0, 1.0, toa.shape[1]) * kprnu
+        prnu_act = np.random.normal(0.0, 1.0, toa.shape[1])
 
         for i in range(toa.shape[1]):
-            # toa[i, :] = toa[i, :] * (1 + prnu_act)
-            toa = toa * (1 + prnu_act)
+            toa[:, i] = toa[:, i] * (1 + prnu_act[i] * kprnu)
+            # toa = toa * (1 + prnu_act)
         return toa
 
     def darkSignal(self, toa, kdsnu, T, Tref, ds_A_coeff, ds_B_coeff):
@@ -177,13 +182,13 @@ class detectionPhase(initIsm):
         """
         #TODO
 
-        dsnu_act = np.abs(np.random.normal(0., 1., toa.shape[1])) * kdsnu
+        dsnu_act = 1 + np.abs(np.random.normal(0., 1., toa.shape[1]) * kdsnu)
 
         Sd = ds_A_coeff * ((T*T*T)/(Tref*Tref*Tref)) * np.exp(-ds_B_coeff * ((1/T) - (1/Tref)))
 
-        ds_act = Sd * (1 + dsnu_act)
+        ds_act = Sd * dsnu_act
 
-        for i in range(toa.shape[0]):
-            toa[i, :] = toa[i, :] + ds_act
+        for i in range(toa.shape[1]):
+            toa[:, i] = toa[:, i] + ds_act[i]
         return toa
 
