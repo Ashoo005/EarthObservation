@@ -4,7 +4,7 @@
 from l1c.src.initL1c import initL1c
 from common.io.writeToa import writeToa, readToa
 from common.io.readGeodetic import readGeodetic, getCorners
-import mgrs
+from mgrspy import mgrs
 import numpy as np
 from scipy.interpolate import bisplrep, bisplev
 import matplotlib.pyplot as plt
@@ -63,14 +63,55 @@ class l1c(initL1c):
         :return: L1C radiances, L1C latitude and longitude in degrees
         '''
         #TODO
+
+        tck = bisplrep(lat, lon, toa)
+
+        # m = mgrs.MGRS()
+        mgrs_tiles = set([])
+
+        for row in range(lat.shape[0]):
+            for column in range(lon.shape[1]):
+                my_mgrs = str(mgrs.toMgrs(lat[row, column], lon[row, column], self.l1cConfig.mgrs_tile_precision))
+                mgrs_tiles.add(my_mgrs)
+
+        mgrs_tiles = list(mgrs_tiles)
+
+        lat_l1c = np.zeros(len(mgrs_tiles))
+        lon_l1c = np.zeros(len(mgrs_tiles))
+        toa_l1c = np.zeros(len(mgrs_tiles))
+
+        for index in range(len(mgrs_tiles)):
+            lat_l1c[index], lon_l1c[index] = mgrs.toWgs(mgrs_tiles[index])
+            toa_l1c[index] = bisplev(lat_l1c[index], lon_l1c[index],tck)
+
+        toa_sort = np.sort(toa_l1c)
+
         return lat_l1c, lon_l1c, toa_l1c
 
-    def checkSize(self, lat,toa):
-        '''
-        Check the sizes of the input radiances and geodetic coordinates.
-        If they don't match, exit.
-        :param lat: Latitude 2D matrix
-        :param toa: Radiance 2D matrix
-        :return: NA
-        '''
-        #TODO
+    # def checkSize(self, lat,toa):
+    #     '''
+    #     Check the sizes of the input radiances and geodetic coordinates.
+    #     If they don't match, exit.
+    #     :param lat: Latitude 2D matrix
+    #     :param toa: Radiance 2D matrix
+    #     :return: NA
+    #     '''
+    #     #TODO
+
+    def plotL1cToa(self, lat_l1c, lon_l1c, toa_l1c, band):
+        jet = cm.get_cmap('jet', len(lat_l1c))
+        toa_l1c[np.argwhere(toa_l1c < 0)] = 0
+        max_toa = np.max(toa_l1c)
+        # Plot stuff
+        fig = plt.figure(figsize=(20, 10))
+        clr = np.zeros(len(lat_l1c))
+        for ii in range(len(lat_l1c)):
+            clr = jet(toa_l1c[ii] / max_toa)
+            plt.plot(lon_l1c[ii], lat_l1c[ii], '.', color=clr, markersize=10)
+        plt.title('Projection on ground', fontsize=20)
+        plt.xlabel('Longitude [deg]', fontsize=16)
+        plt.ylabel('Latitude [deg]', fontsize=16)
+        plt.grid()
+        plt.axis('equal')
+        plt.savefig(self.outdir + 'toa_' + band + '.png')
+        plt.close(fig)
